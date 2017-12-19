@@ -1,0 +1,13 @@
+<ForceField>
+ <AtomTypes>
+  <Type name="1" class="H" element="H" mass="39.9481"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="H">
+   <Atom name="H" type="1"/>
+  </Residue>
+ </Residues>  
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <Atom type="1" charge="0.0" sigma="0.340500" epsilon="0.997967"/>
+ </NonbondedForce>
+</ForceField>

@@ -77,8 +77,8 @@ simulation = Simulation(pdb.topology, system, integrator,platform)
 simulation.context.setPositions(pdb.positions)
 simulation.minimizeEnergy()
 #simulation.reporters.append(PDBReporter('gcmc_out_%d-%d.pdb' %(lowerLimit,upperLimit), 100000000000000))
-#simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
-#                            potentialEnergy=True, temperature=True))
+simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
+                            potentialEnergy=True, temperature=True))
 simulation.step(10000)
 
 box = simulation.topology.getUnitCellDimensions().value_in_unit(nanometers)

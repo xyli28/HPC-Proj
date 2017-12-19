@@ -229,6 +229,7 @@ class Gcmc(object):
 
             if (not goodAtoms):
                 self.realList.append(self.randIndex)
+                print ("???????????")
                 return -1 
         #while (not goodAtoms):
         #    goodAtoms = True
