@@ -27,4 +27,4 @@ python3 argon.py
 
 All of them would print 2 lines results,
 First line is time for DFS cluster searching
-Second line is time for Finding neighbour list 
+Second line is time for Finding neighboring list 
