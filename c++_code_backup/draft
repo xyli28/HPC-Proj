@@ -17,7 +17,6 @@
 # but this wasn't required for these examples on Centos 5.2 using
 # gcc 4.1.2.
 
-
 # Check whether this is the right capitalization for your install directory.
 OpenMM_INSTALL_DIR=/home/xli646/local/openmm
 CFLAGS = -g 
@@ -35,7 +34,7 @@ LIBS= -lOpenMM
 
 # Warnings
 WFLAGS  := -Wall -Wextra -Wsign-conversion -Wsign-compare
-#
+
 # Optimization and architecture
 OPT             := -O3
 
@@ -47,31 +46,37 @@ CXXSTD  := -std=c++11
 LDOPT   := $(OPT)
 LDFLAGS :=
 
-#ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox
-#ALL_C_EXAMPLES   = HelloArgonInC HelloSodiumChlorideInC
-#ALL_F95_EXAMPLES = HelloArgonInFortran HelloSodiumChlorideInFortran
+# Names of executables to create
+EXEC := HelloWaterBox.exe
 
-#ALL_PROGS = $(ALL_CPP_EXAMPLES) $(ALL_C_EXAMPLES) $(ALL_F95_EXAMPLES)
+.DEFAULT_GOAL := all
+
+.PHONY: debug
+debug : OPT  := -O0 -g -fno-omit-frame-pointer -fsanitize=address
+debug : LDFLAGS := -fsanitize=address
+debug : ARCH :=
+debug : $(EXEC)
+
+all : Makefile $(EXEC)
 
 
-default : argon
+%.o : %.cpp Makefile
+	@ echo Compiling $<...
+	@ $(CXX) $(CXXSTD) $(WFLAGS) $(OPT) $(ARCH) $(CXXFLAGS) -c -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $@
 
-#all : $(ALL_PROGS)
+$(EXEC) : %.exe : %.o
+	@ echo Building $@...
+	@ $(CXX) -o $@ $< $(LDFLAGS)
 
-#Treat all .cpp source files the same way.
-argon: argon.o Gcmc.o
-	$(CXX) $(CXXSTD) $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) -o argon argon.o Gcmc.o
+.PHONY: clean
+clean:
+	@ rm -f *.o $(EXEC) *.out *.in
 
-argon.o: argon.cpp Gcmc.h
-	$(CXX) $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS)  
 
-Gcmc.o: Gcmc.cpp Gcmc.h
-	$(CXX) $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) 
-        
 
-#.cpp : 
-#	$(CXX) -g $(CXXSTD) $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $*
 
-clean : 
-	rm $(default) *.o *.mod *.obj *.exe argon
+
+
+
+
 

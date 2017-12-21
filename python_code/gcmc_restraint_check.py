@@ -193,11 +193,11 @@ class Gcmc(object):
                 if distance < self.cutoff:
                     nIn += 1       
 
-        vec = random_vector_inside_sphere()
-        displace = Vec3(vec[0],vec[1],vec[2])*self.cutoff*nanometers
-        positions[self.randIndex] = positions[self.refIndex]+displace
-        
-        self.simulation.context.setPositions(positions)
+        #vec = random_vector_inside_sphere()
+        #displace = Vec3(vec[0],vec[1],vec[2])*self.cutoff*nanometers
+        #positions[self.randIndex] = positions[self.refIndex]+displace
+        #
+        #self.simulation.context.setPositions(positions)
         return nIn 
 
     def getRandomAtoms(self):

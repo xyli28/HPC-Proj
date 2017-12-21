@@ -8,7 +8,6 @@ class Gcmc
 {
 public:
     //members
-    int              N;
     double           temp;
     double           beta;
     double           mu;
@@ -56,7 +55,7 @@ public:
          double waveLengthCube, int M, int numReal, int numGhost, std::vector<int> realList,
          std::vector<int> ghostList, OpenMM::System *system, OpenMM::Context* context, 
          OpenMM::Integrator* integrator, OpenMM::NonbondedForce* nonbond, int mdSteps,
-         int upperLimit, int lowerLimit, double sigma, double epsilon, double charge, int N);
+         int upperLimit, int lowerLimit, double sigma, double epsilon, double charge);
     ~Gcmc();
 
 public: 

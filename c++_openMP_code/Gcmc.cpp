@@ -8,12 +8,12 @@ Gcmc::Gcmc(double temp,double beta,double mu, double volume, double boxEdgeLengt
     double waveLengthCube, int M, int numReal, int numGhost, std::vector<int> realList,
     std::vector<int> ghostList, OpenMM::System *system, OpenMM::Context* context, 
     OpenMM::Integrator* integrator, OpenMM::NonbondedForce* nonbond, int mdSteps,
-    int upperLimit, int lowerLimit, double sigma, double epsilon, double charge) :
+    int upperLimit, int lowerLimit, double sigma, double epsilon, double charge, int N) :
     temp(temp),beta(beta),mu(mu),volume(volume),boxEdgeLength(boxEdgeLength),
     waveLengthCube(waveLengthCube),M(M),numReal(numReal),numGhost(numGhost),realList(realList),
     ghostList(ghostList), system(system), context(context), integrator(integrator),
     nonbond(nonbond), mdSteps(mdSteps), upperLimit(upperLimit),
-    lowerLimit(lowerLimit), sigma(sigma), epsilon(epsilon),charge(charge){
+    lowerLimit(lowerLimit), sigma(sigma), epsilon(epsilon),charge(charge),N(N){
 
     eta = new double[upperLimit*M+1];   
     lamda = new double[M+1];
@@ -51,9 +51,9 @@ double Gcmc::getDistance(const std::vector<OpenMM::Vec3>& positions, int atomA, 
     double dSq = 0.0;
     double d = 0.0;
     OpenMM::Vec3 dVec = positions[atomA] - positions[atomB];
-    dSq = pow((dVec[0]-boxEdgeLength*round(dVec[0]/boxEdgeLength)),2);
-    dSq = pow((dVec[1]-boxEdgeLength*round(dVec[1]/boxEdgeLength)),2);
-    dSq = pow((dVec[2]-boxEdgeLength*round(dVec[2]/boxEdgeLength)),2);
+    dSq += pow((dVec[0]-boxEdgeLength*round(dVec[0]/boxEdgeLength)),2);
+    dSq += pow((dVec[1]-boxEdgeLength*round(dVec[1]/boxEdgeLength)),2);
+    dSq += pow((dVec[2]-boxEdgeLength*round(dVec[2]/boxEdgeLength)),2);
     d = sqrt(dSq);
     return d;
 }
@@ -64,100 +64,103 @@ void Gcmc::generateGraph(const std::vector<OpenMM::Vec3>& positions){
 
     //for (int i = 0; i < size; i++)
     //    bond[i] = *new std::vector<int>();
-
-//#pragma omp parallel
+#pragma omp parallel num_threads(N)
 {
-//#pragma omp for  
+//std::cout << omp_get_num_threads() << std::endl;
+#pragma omp for 
     for (int i = 0; i < size; i++)
         for (int j = i + 1; j < size; j++ )
-            if (getDistance(positions,realList[i],realList[j]) < cutoff){
-//#pragma omp critical
+            if (getDistance(positions,realList[i],realList[j]) <= cutoff){
+#pragma omp critical
                 bond[realList[i]].push_back(realList[j]);
-//#pragma omp critical
+#pragma omp critical
                 bond[realList[j]].push_back(realList[i]);
             }
 }
+    //for (int i = 0; i < 30; i++)
+    //    std::cout << bond[i].size();
+    //std::cout<<std::endl;
 }
 
 int Gcmc::clusterSizebyDFS(int start){
-    std::vector<int> visited;
+    std::vector<int> visited = {10000};
     std::vector<int> stack = {start};
   
     while (!stack.empty()){
         int vertex = stack.back();
         stack.pop_back();
-        if (std::find(visited.begin(),visited.end(),vertex) != visited.end()){
+        if (std::find(visited.begin(),visited.end(),vertex) == visited.end()){
             visited.push_back(vertex);
             for (int i = 0; i < bond[vertex].size(); i++)
                 if (std::find(visited.begin(),visited.end(),bond[vertex][i]) 
-                    != visited.end())
+                    == visited.end())
                     stack.push_back(bond[vertex][i]);
         }
     }
-    return visited.size();
+    return visited.size()-1;
 }
     
 bool Gcmc::checkClusterCriteria(const std::vector<OpenMM::Vec3>& positions){
     generateGraph(positions);
     int size = clusterSizebyDFS(realList[0]);
-    if (size = realList.size())
+    if (size == realList.size())
         return true;
     else
         return false;
 }
 
-void  Gcmc::setRandomPositions(){
+void Gcmc::setRandomPositions(){
     const std::vector<OpenMM::Vec3>& positions = 
         context->getState(OpenMM::State::Positions).getPositions();
     refIndex = realList[rand()%realList.size()];
  
     nIn = 0.0;
-#pragma omp parallel
+#pragma omp parallel num_threads(N)
 {
+//std::cout << omp_get_num_threads() << std::endl;
 #pragma omp for 
     for (int i = 0; i< realList.size(); i++)
         if (realList[i] != refIndex)
-            if (getDistance(positions,realList[i],refIndex) < cutoff)
+            if (getDistance(positions,realList[i],refIndex) <= cutoff)
 #pragma omp atomic
                 nIn += 1;
 }   
-    OpenMM::Vec3 randVec = *new OpenMM::Vec3;
-    do {
-        randVec[0] = (rand()/double(RAND_MAX)*2-1)*cutoff;
-        randVec[1] = (rand()/double(RAND_MAX)*2-1)*cutoff;
-        randVec[2] = (rand()/double(RAND_MAX)*2-1)*cutoff;
-    } while (sqrt(pow(randVec[0],2)+pow(randVec[1],2)
-        +pow(randVec[2],2)) <= cutoff);
+    //OpenMM::Vec3 randVec = *new OpenMM::Vec3;
+    //do {
+    //    randVec[0] = (rand()/double(RAND_MAX)*2-1)*cutoff;
+    //    randVec[1] = (rand()/double(RAND_MAX)*2-1)*cutoff;
+    //    randVec[2] = (rand()/double(RAND_MAX)*2-1)*cutoff;
+    //} while (sqrt(pow(randVec[0],2)+pow(randVec[1],2)
+    //    +pow(randVec[2],2)) <= cutoff);
 
-    std::vector<OpenMM::Vec3> newPositions(positions);
-    newPositions[randIndex] = newPositions[randIndex] + randVec;
-    context->setPositions(newPositions);
+    //std::vector<OpenMM::Vec3> newPositions(positions);
+    //newPositions[randIndex] = newPositions[randIndex] + randVec;
+    //context->setPositions(newPositions);
 }
    
 bool Gcmc::getRandomAtoms(){
     const std::vector<OpenMM::Vec3>& positions =
-    context->getState(OpenMM::State::Positions).getPositions(); 
+        context->getState(OpenMM::State::Positions).getPositions(); 
 
     bool goodAtoms = false;
     nIn = 0.0;
     std::vector<int> randList;
     refIndex = realList[rand()%realList.size()];
-#pragma omp parallel
+#pragma omp parallel num_threads(N)
 {
 #pragma omp for
     for (int i = 0; i < realList.size(); i++)
         if (realList[i] != refIndex)
-            if (getDistance(positions,realList[i],refIndex) < cutoff){
+            if (getDistance(positions,realList[i],refIndex) <= cutoff){
 #pragma omp atomic
                 nIn += 1.0;
 #pragma omp critical
                 randList.push_back(realList[i]);
             }
 }
-    int d = realList.size();    
+    randIndex = randList[rand()%randList.size()];
     realList.erase(std::remove(realList.begin(),realList.end(),
-        randIndex),realList.end());    
-    if (d!=realList.size()+1)
+        randIndex),realList.end());  
  
     if (!checkClusterCriteria(positions)){
         realList.push_back(randIndex); 
@@ -174,7 +177,7 @@ void Gcmc::setRandomVelocities(){
         context->getState(OpenMM::State::Velocities).getVelocities();         
     std::vector<OpenMM::Vec3> newNewVelocities(velocities);
     newNewVelocities[randIndex] = newVelocities[randIndex];
-    context->setVelocities(newVelocities);
+    context->setVelocities(newNewVelocities);
 }
 
 void Gcmc::insertion(){
@@ -191,7 +194,7 @@ void Gcmc::insertion(){
         updateForce(lamda[m+1]);
         double newPotential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
         double dU = newPotential - oldPotential;
-        double acc = exp(-beta*(dU-(lamda[m+1]-lamda[m])*mu)+eta[numReal*M+m+1]-eta[numReal*M+m])
+        double acc = exp(-beta*1000*(dU-(lamda[m+1]-lamda[m])*mu)+eta[numReal*M+m+1]-eta[numReal*M+m])
                      * pow(vIn*numReal/waveLengthCube,lamda[m+1]-lamda[m])
                      * pow((numReal+lamda[m])*(nIn+lamda[m]),lamda[m])/
                      pow((numReal+lamda[m+1])*(nIn+lamda[m+1]),lamda[m+1]);
@@ -234,12 +237,12 @@ void Gcmc::deletion(){
         double dU = newPotential - oldPotential;
         double acc = 1.0;
         if (m == 0)
-            acc = exp(-beta*(dU-(lamda[M-1]-1.0)*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
+            acc = exp(-beta*1000*(dU-(lamda[M-1]-1.0)*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
                   *pow((numReal-1)*vIn/waveLengthCube,lamda[M-1]-1.0)
                   *pow(numReal*nIn,1.0)/
                   pow((numReal-1.0+lamda[M-1])*(nIn-1.0+lamda[M-1]),lamda[M-1]);
         else
-            acc = exp(-beta*(dU-(lamda[m-1]-lamda[m])*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
+            acc = exp(-beta*1000*(dU-(lamda[m-1]-lamda[m])*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
                   *pow(numReal*vIn/waveLengthCube,lamda[m-1]-lamda[m])
                   *pow((numReal+lamda[m])*(nIn+lamda[m]),lamda[m])/
                   pow((numReal+lamda[m-1])*(nIn+lamda[m-1]),lamda[m-1]);
@@ -256,7 +259,7 @@ void Gcmc::deletion(){
                 ghostList.push_back(randIndex);
             } else 
                 m -= 1;
-        } else 
+        } else
             if (m == 0){
                 updateForce(1.0);
                 realList.push_back(randIndex);

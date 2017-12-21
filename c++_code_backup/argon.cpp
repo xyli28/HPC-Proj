@@ -22,11 +22,6 @@
 #include <time.h>
 #include "Gcmc.h"
 #include "OpenMM.h"
-#include <ctime>
-#include <chrono>
-using std::time;
-using namespace std::chrono;
-
 
 // -----------------------------------------------------------------------------
 //                                 MOCK MD CODE
@@ -227,8 +222,7 @@ int main() {
         for (int i = 0; i < numReal; i++)
             realList.push_back(i);
         for (int i = numReal; i < UpperLimit; i++){
-            realList.push_back(i);
-            //ghostList.push_back(i);
+            ghostList.push_back(i);
             omm->nonbond->setParticleParameters(i,0.0,Sigma,0.0);
         }
         omm->nonbond->setReactionFieldDielectric(0.0);
@@ -246,64 +240,52 @@ int main() {
                   ghostList, omm->system, omm->context, omm->integrator,
                   omm->nonbond, MdSteps, UpperLimit, LowerLimit, Sigma,
                   Epsilon, Charge);
-
-        const std::vector<OpenMM::Vec3>& positions = 
-            omm->context->getState(OpenMM::State::Positions).getPositions();
-        steady_clock::time_point start_T = steady_clock::now(); 
-        for (int i = 0; i < 1000; i++)
-            gcmc.checkClusterCriteria(positions);
-        steady_clock::time_point end_T = steady_clock::now(); 
-        std::cout << duration_cast<milliseconds>(end_T-start_T).count() << std::endl; 
-         start_T = steady_clock::now(); 
-        for (int i = 0; i < 1000; i++)
-            gcmc.setRandomPositions();
-        end_T = steady_clock::now(); 
-        std::cout << duration_cast<milliseconds>(end_T-start_T).count() << std::endl; 
-        //myStepWithOpenMM(omm,10000);
     
-        ////equilibration
-        //while (exp(gcmc.f)>1.001){
-        //    for (int i = 0; i < 3000; i++){
-        //        gcmc.step();
-        //        std::cout<<"numReal "<<gcmc.numReal+gcmc.lamda[gcmc.m]
-        //            <<" numGhost "<<gcmc.numGhost-gcmc.lamda[gcmc.m]<<std::endl;
-        //    } 
-        //    std::cout << "histogram" <<std::endl;
-        //    std::cout << gcmc.histogram <<std::endl;
-        //    std::cout << "eta" <<std::endl;
-        //    std::cout << gcmc.eta <<std::endl;
-        //    std::cout << "energy" <<std::endl;
-        //    std::cout << *gcmc.getEnergy() <<std::endl;
-        //    gcmc.rezeroEnergy();
-        //    gcmc.updateWangLandauFactor();
-        //    std::cout << "wang-landau factor" <<std::endl;
-        //    std::cout << exp(gcmc.f) <<std::endl;
-        //    std::cout << gcmc.getInsrProbability() << std::endl;
-        //    std::cout << gcmc.getDelProbability() << std::endl;
-        //} 
-        //gcmc.rezeroState();
-        //
-        ////production
-        //gcmc.f = 0.0;
-        //for (int i = 0; i < NumGcmc; i++){
-        //    gcmc.step();
-        //    std::cout<<"numReal "<<gcmc.numReal + gcmc.lamda[gcmc.m]
-        //        <<" numGhost "<<gcmc.numGhost - gcmc.lamda[gcmc.m]<<std::endl;
-        //}
-        //std::cout << gcmc.getInsrProbability() << std::endl;
-        //std::cout << gcmc.getDelProbability() << std::endl;
-        //std::cout << "histogram" <<std::endl;
-        //std::cout << gcmc.histogram <<std::endl;
-        //std::cout << "eta" <<std::endl;
-        //std::cout << gcmc.eta <<std::endl;
-        //gcmc.getEnergy();
-        //gcmc.getFreeEnergy();
-        //for (int i = 0; i < (UpperLimit-LowerLimit)*M + 1; i++)
-        //    std::cout<<gcmc.freeEnergy[i]<<"    "<<gcmc.energy[i]<<std::endl;
+        myStepWithOpenMM(omm,10000);
+    
+        //equilibration
+        while (exp(gcmc.f)>1.001){
+            for (int i = 0; i < 3000; i++){
+                gcmc.step();
+                std::cout<<"numReal "<<gcmc.numReal+gcmc.lamda[gcmc.m]
+                    <<" numGhost "<<gcmc.numGhost-gcmc.lamda[gcmc.m]<<std::endl;
+            } 
+            std::cout << "histogram" <<std::endl;
+            std::cout << gcmc.histogram <<std::endl;
+            std::cout << "eta" <<std::endl;
+            std::cout << gcmc.eta <<std::endl;
+            std::cout << "energy" <<std::endl;
+            std::cout << *gcmc.getEnergy() <<std::endl;
+            gcmc.rezeroEnergy();
+            gcmc.updateWangLandauFactor();
+            std::cout << "wang-landau factor" <<std::endl;
+            std::cout << exp(gcmc.f) <<std::endl;
+            std::cout << gcmc.getInsrProbability() << std::endl;
+            std::cout << gcmc.getDelProbability() << std::endl;
+        } 
+        gcmc.rezeroState();
+        
+        //production
+        gcmc.f = 0.0;
+        for (int i = 0; i < NumGcmc; i++){
+            gcmc.step();
+            std::cout<<"numReal "<<gcmc.numReal + gcmc.lamda[gcmc.m]
+                <<" numGhost "<<gcmc.numGhost - gcmc.lamda[gcmc.m]<<std::endl;
+        }
+        std::cout << gcmc.getInsrProbability() << std::endl;
+        std::cout << gcmc.getDelProbability() << std::endl;
+        std::cout << "histogram" <<std::endl;
+        std::cout << gcmc.histogram <<std::endl;
+        std::cout << "eta" <<std::endl;
+        std::cout << gcmc.eta <<std::endl;
+        gcmc.getEnergy();
+        gcmc.getFreeEnergy();
+        for (int i = 0; i < (UpperLimit-LowerLimit)*M + 1; i++)
+            std::cout<<gcmc.freeEnergy[i]<<"    "<<gcmc.energy[i]<<std::endl;
  
         // Clean up OpenMM data structures.
+        delete &gcmc;
         myTerminateOpenMM(omm);
-        //delete &gcmc;
 
         return 0; // Normal return from main.
     }

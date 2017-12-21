@@ -60,13 +60,13 @@ default : argon
 
 #Treat all .cpp source files the same way.
 argon: argon.o Gcmc.o
-	$(CXX) $(CXXSTD) $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) -o argon argon.o Gcmc.o
+	$(CXX) -g $(CXXSTD) $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) -o argon argon.o Gcmc.o
 
 argon.o: argon.cpp Gcmc.h
-	$(CXX) $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS)  
+	$(CXX) -g $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS)  
 
 Gcmc.o: Gcmc.cpp Gcmc.h
-	$(CXX) $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) 
+	$(CXX) -g $(CXXSTD) -c $(WFLAGS) $(OPT) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) 
         
 
 #.cpp : 

@@ -5,6 +5,7 @@ from sys import stdout
 from math import exp
 from random import seed
 import numpy as np
+import time
 from gcmc_restraint_check import Gcmc
 
 print ("GCMC for LiF ion pair")
@@ -68,7 +69,7 @@ for i in range(numReal):
     realList.append(i)
 numGhost = 30-numReal
 for i in range(numReal,30):
-    ghostList.append(i)
+    realList.append(i)
     nonbondedforce.setParticleParameters(i,0.0,0.3405,0.0)
 
 #generate simulation object and equilibrate
@@ -119,52 +120,61 @@ parameters['upperLimit'] = upperLimit
 parameters['lowerLimit'] = lowerLimit
 gcmc = Gcmc(parameters)
 
-
-#simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
-#                            potentialEnergy=True, temperature=True))
-#simulation.reporters.append(DCDReporter('output_%d-%d.dcd' %(lowerLimit,upperLimit), 100))
-#equilibration
-#j = 0;
-while (exp(gcmc.f) > 1.001):
-    for i in range(3000):
-        #print (j*1000+i)
-        #state = simulation.context.getState(getPositions=True)
-        #simulation.reporters[0].report(simulation, state)
-        gcmc.step()
-        print ("numReal %f numGhost %f" %(gcmc.numReal+gcmc.lamda[gcmc.m],gcmc.numGhost-gcmc.lamda[gcmc.m])) 
-    print("#histogram")
-    print(gcmc.histogram)
-    print("eta")
-    print(gcmc.eta)
-    print("energy")
-    print(gcmc.getEnergy())
-    #every 1000 steps, update wanglaudafactor
-    gcmc.updateWangLandauFactor()
-    print("wang-landau factor")
-    print(gcmc.getInsrPrabability())
-    print(gcmc.getDelPrabability())
-    print(exp(gcmc.f))
-    #j += 1;
-
-gcmc.rezeroStat()
-
-#production
-gcmc.f = 0.0
-for i in range(numGcmc):
-    gcmc.step()
-    print ("numReal %f numGhost %f" %(gcmc.numReal+gcmc.lamda[gcmc.m],gcmc.numGhost-gcmc.lamda[gcmc.m])) 
-#print(gcmc.getAverageNum())
-#print(gcmc.getInsrPrabability())
-print(gcmc.getDelPrabability())
-print(gcmc.eta)
-print(gcmc.histogram)
-x = gcmc.getFreeEnergy()
-print(x)
-for i in range(61):
-    print (x[i])
-print (" ")
-x = gcmc.getEnergy()
-print(x)
-for i in range(61):
-    print (x[i])
+start = time.time()*1000
+for i in range(1000):
+    gcmc.checkClusterCriteria(pdb.positions)
+end = time.time()*1000
+print (end-start)
+start = time.time()*1000
+for i in range(1000):
+    gcmc.setRandomPosition()
+end = time.time()*1000
+print (end-start)
+##simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
+##                            potentialEnergy=True, temperature=True))
+##simulation.reporters.append(DCDReporter('output_%d-%d.dcd' %(lowerLimit,upperLimit), 100))
+##equilibration
+##j = 0;
+#while (exp(gcmc.f) > 1.001):
+#    for i in range(3000):
+#        #print (j*1000+i)
+#        #state = simulation.context.getState(getPositions=True)
+#        #simulation.reporters[0].report(simulation, state)
+#        gcmc.step()
+#        print ("numReal %f numGhost %f" %(gcmc.numReal+gcmc.lamda[gcmc.m],gcmc.numGhost-gcmc.lamda[gcmc.m])) 
+#    print("#histogram")
+#    print(gcmc.histogram)
+#    print("eta")
+#    print(gcmc.eta)
+#    print("energy")
+#    print(gcmc.getEnergy())
+#    #every 1000 steps, update wanglaudafactor
+#    gcmc.updateWangLandauFactor()
+#    print("wang-landau factor")
+#    print(gcmc.getInsrPrabability())
+#    print(gcmc.getDelPrabability())
+#    print(exp(gcmc.f))
+#    #j += 1;
+#
+#gcmc.rezeroStat()
+#
+##production
+#gcmc.f = 0.0
+#for i in range(numGcmc):
+#    gcmc.step()
+#    print ("numReal %f numGhost %f" %(gcmc.numReal+gcmc.lamda[gcmc.m],gcmc.numGhost-gcmc.lamda[gcmc.m])) 
+##print(gcmc.getAverageNum())
+##print(gcmc.getInsrPrabability())
+#print(gcmc.getDelPrabability())
+#print(gcmc.eta)
+#print(gcmc.histogram)
+#x = gcmc.getFreeEnergy()
+#print(x)
+#for i in range(61):
+#    print (x[i])
+#print (" ")
+#x = gcmc.getEnergy()
+#print(x)
+#for i in range(61):
+#    print (x[i])
 

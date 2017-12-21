@@ -1,6 +1,0 @@
-
-Gcmc::Gcmc(double temp,double beta,double mu, double volume, double boxEdgeLength,
-    double waveLengthCube, int M, double numReal, double numGhost, std::vector<int> realList,
-    std::vector<int> ghostList, OpenMM::System *system, OpenMM::Context* context, 
-    OpenMM::Integrator* integrator, OpenMM::NonbondedForce* nonbond, int mdSteps,
-    int upperLimit, int lowerLimit, double sigma, double charge) :
