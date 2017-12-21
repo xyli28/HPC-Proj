@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <omp.h>
 #include "Gcmc.h"
 #include "OpenMM.h"
 
@@ -50,9 +51,9 @@ double Gcmc::getDistance(const std::vector<OpenMM::Vec3>& positions, int atomA, 
     double dSq = 0.0;
     double d = 0.0;
     OpenMM::Vec3 dVec = positions[atomA] - positions[atomB];
-    dSq += pow((dVec[0]-boxEdgeLength*round(dVec[0]/boxEdgeLength)),2);
-    dSq += pow((dVec[1]-boxEdgeLength*round(dVec[1]/boxEdgeLength)),2);
-    dSq += pow((dVec[2]-boxEdgeLength*round(dVec[2]/boxEdgeLength)),2);
+    dSq = pow((dVec[0]-boxEdgeLength*round(dVec[0]/boxEdgeLength)),2);
+    dSq = pow((dVec[1]-boxEdgeLength*round(dVec[1]/boxEdgeLength)),2);
+    dSq = pow((dVec[2]-boxEdgeLength*round(dVec[2]/boxEdgeLength)),2);
     d = sqrt(dSq);
     return d;
 }
@@ -60,123 +61,106 @@ double Gcmc::getDistance(const std::vector<OpenMM::Vec3>& positions, int atomA, 
 void Gcmc::generateGraph(const std::vector<OpenMM::Vec3>& positions){
     bond.clear();    
     int size = realList.size();    
-    std::cout << "generate graph" << std::endl;
+
     //for (int i = 0; i < size; i++)
     //    bond[i] = *new std::vector<int>();
 
+//#pragma omp parallel
+{
+//#pragma omp for  
     for (int i = 0; i < size; i++)
         for (int j = i + 1; j < size; j++ )
-            if (getDistance(positions,realList[i],realList[j]) <= cutoff){
+            if (getDistance(positions,realList[i],realList[j]) < cutoff){
+//#pragma omp critical
                 bond[realList[i]].push_back(realList[j]);
+//#pragma omp critical
                 bond[realList[j]].push_back(realList[i]);
             }
-    std::cout << "print bond" << std::endl;
-    for (int i = 0; i < size; i++)
-        std::cout << bond[realList[i]].size() << std::endl;
-    std::cout << "bond end" << std::endl;
+}
 }
 
 int Gcmc::clusterSizebyDFS(int start){
-    std::vector<int> visited = {10000};
+    std::vector<int> visited;
     std::vector<int> stack = {start};
   
     while (!stack.empty()){
         int vertex = stack.back();
         stack.pop_back();
-        if (std::find(visited.begin(),visited.end(),vertex) == visited.end()){
+        if (std::find(visited.begin(),visited.end(),vertex) != visited.end()){
             visited.push_back(vertex);
             for (int i = 0; i < bond[vertex].size(); i++)
                 if (std::find(visited.begin(),visited.end(),bond[vertex][i]) 
-                    == visited.end())
+                    != visited.end())
                     stack.push_back(bond[vertex][i]);
         }
     }
-    std::cout << realList.size() << "vs" << visited.size()-1 << std::endl;
-    return visited.size()-1;
+    return visited.size();
 }
     
 bool Gcmc::checkClusterCriteria(const std::vector<OpenMM::Vec3>& positions){
     generateGraph(positions);
     int size = clusterSizebyDFS(realList[0]);
-    if (size == realList.size())
+    if (size = realList.size())
         return true;
     else
         return false;
 }
 
-void Gcmc::setRandomPositions(){
+void  Gcmc::setRandomPositions(){
     const std::vector<OpenMM::Vec3>& positions = 
         context->getState(OpenMM::State::Positions).getPositions();
     refIndex = realList[rand()%realList.size()];
  
     nIn = 0.0;
+#pragma omp parallel
+{
+#pragma omp for 
     for (int i = 0; i< realList.size(); i++)
         if (realList[i] != refIndex)
-            if (getDistance(positions,realList[i],refIndex) <= cutoff)
+            if (getDistance(positions,realList[i],refIndex) < cutoff)
+#pragma omp atomic
                 nIn += 1;
+}   
     OpenMM::Vec3 randVec = *new OpenMM::Vec3;
     do {
-        randVec[0] = (2*rand()/double(RAND_MAX)-1);
-        randVec[1] = (2*rand()/double(RAND_MAX)-1);
-        randVec[2] = (2*rand()/double(RAND_MAX)-1);
+        randVec[0] = (rand()/double(RAND_MAX)*2-1)*cutoff;
+        randVec[1] = (rand()/double(RAND_MAX)*2-1)*cutoff;
+        randVec[2] = (rand()/double(RAND_MAX)*2-1)*cutoff;
     } while (sqrt(pow(randVec[0],2)+pow(randVec[1],2)
-        +pow(randVec[2],2)) > 1);
-    
-    std::cout << "insertDistance" <<sqrt(pow(randVec[0],2)+pow(randVec[1],2)  +pow(randVec[2],2)) << std::endl;
-    std::cout << "ref/random " << refIndex << "  " << randIndex << std::endl; 
-    randVec[0] *= cutoff;    
-    randVec[1] *= cutoff;    
-    randVec[2] *= cutoff;    
+        +pow(randVec[2],2)) <= cutoff);
 
-    std::cout << randVec[0]<<" " <<randVec[1] << " " << randVec[2] << std::endl; 
-    
-    positions[randIndex] = 1;
-     
-    std::cout << "get distance after insert" << getDistance(positions,refIndex,randIndex) << std::endl; 
     std::vector<OpenMM::Vec3> newPositions(positions);
-    newPositions[randIndex] = randVec + newPositions[refIndex];
+    newPositions[randIndex] = newPositions[randIndex] + randVec;
     context->setPositions(newPositions);
-    const std::vector<OpenMM::Vec3>& newnewpositions = 
-        context->getState(OpenMM::State::Positions).getPositions();
-    std::cout << "get distance after insert" << getDistance(newPositions,refIndex,randIndex) << std::endl; 
-    std::cout << "get distance after insert" << getDistance(newnewpositions,refIndex,randIndex) << std::endl; 
-    std::cout << "check positions" << positions[0][1] << std::endl; 
-    std::cout << "check positions" << newPositions[0][1] << std::endl; 
-    std::cout << "check positions" << newnewpositions[0][1] << std::endl; 
-    for (int i = 0; i < realList.size(); i++)
-        std::cout <<" "<< realList[i];
-    std::cout << std::endl; 
 }
    
 bool Gcmc::getRandomAtoms(){
     const std::vector<OpenMM::Vec3>& positions =
-        context->getState(OpenMM::State::Positions).getPositions(); 
+    context->getState(OpenMM::State::Positions).getPositions(); 
 
     bool goodAtoms = false;
     nIn = 0.0;
     std::vector<int> randList;
-    
-    std::cout << "reallistsize "<<realList.size() << std::endl; 
     refIndex = realList[rand()%realList.size()];
+#pragma omp parallel
+{
+#pragma omp for
     for (int i = 0; i < realList.size(); i++)
         if (realList[i] != refIndex)
-            if (getDistance(positions,realList[i],refIndex) <= cutoff){
-                std::cout <<"distance " << getDistance(positions,realList[i],refIndex)<< std::endl;
+            if (getDistance(positions,realList[i],refIndex) < cutoff){
+#pragma omp atomic
                 nIn += 1.0;
+#pragma omp critical
                 randList.push_back(realList[i]);
-            } else 
-                std::cout <<"distance " << getDistance(positions,realList[i],refIndex)<< std::endl;
-   
-    std::cout << "randlistsize "<<randList.size() << std::endl; 
-    randIndex = randList[rand()%randList.size()];
+            }
+}
+    int d = realList.size();    
     realList.erase(std::remove(realList.begin(),realList.end(),
-        randIndex),realList.end()); 
-    std::cout << "reallistsize "<<realList.size() << std::endl;   
+        randIndex),realList.end());    
+    if (d!=realList.size()+1)
  
     if (!checkClusterCriteria(positions)){
         realList.push_back(randIndex); 
-        std::cout << "reallistsize "<<realList.size() << std::endl;
-        std::cout << "cluster fall apart"<< std::endl;
         return false;
     } else
         return true;
@@ -190,48 +174,33 @@ void Gcmc::setRandomVelocities(){
         context->getState(OpenMM::State::Velocities).getVelocities();         
     std::vector<OpenMM::Vec3> newNewVelocities(velocities);
     newNewVelocities[randIndex] = newVelocities[randIndex];
-    context->setVelocities(newNewVelocities);
+    context->setVelocities(newVelocities);
 }
 
 void Gcmc::insertion(){
-    
-    std::cout <<"insertion" << randIndex <<std::endl;
-    std::cout << "m and lamdam" << m << " " << lamda[m] << std::endl;
     if (numReal == upperLimit){
     } else {
         numInsr += 1.0;
         double oldPotential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-        std::cout <<"old " <<oldPotential << std::endl;
         if (m == 0){
             int randNumber = rand()%ghostList.size();
             randIndex = ghostList[randNumber];
             ghostList.erase(ghostList.begin()+randNumber);
             setRandomPositions();
         }
-        for (int i = 0; i < realList.size(); i++)
-            std::cout <<" "<< realList[i];
-        std::cout << std::endl; 
         updateForce(lamda[m+1]);
         double newPotential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-        std::cout <<"new " <<newPotential << std::endl;
         double dU = newPotential - oldPotential;
-
-        std::cout << "dU " << dU << std::endl;
-        double acc = exp(-beta*1000*(dU-(lamda[m+1]-lamda[m])*mu)+eta[numReal*M+m+1]-eta[numReal*M+m])
+        double acc = exp(-beta*(dU-(lamda[m+1]-lamda[m])*mu)+eta[numReal*M+m+1]-eta[numReal*M+m])
                      * pow(vIn*numReal/waveLengthCube,lamda[m+1]-lamda[m])
                      * pow((numReal+lamda[m])*(nIn+lamda[m]),lamda[m])/
                      pow((numReal+lamda[m+1])*(nIn+lamda[m+1]),lamda[m+1]);
-        std::cout << "acc " << acc << std::endl;
         acc = std::min(acc,1.0);
         if (rand()/double(RAND_MAX) < acc){
-            std::cout <<"suc" << std::endl;
             sucInsr += 1.0;
             if (m == 0){
                 m = 1;
                 setRandomVelocities();
-                const std::vector<OpenMM::Vec3>& newnewpositions = 
-                    context->getState(OpenMM::State::Positions).getPositions();
-                std::cout << "get distance after suc of insertion" << getDistance(newnewpositions,refIndex,randIndex) << std::endl; 
             } else if (m == M-1) {
                 m = 0;
                 realList.push_back(randIndex);
@@ -241,60 +210,41 @@ void Gcmc::insertion(){
                 m += 1;
             }
         } else {
-            std::cout <<"fail" << std::endl;
-            std::cout <<"do it"<< std::endl;
-            double potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-            std::cout << "before dorecover force after insertion " << potential << std::endl;
             updateForce(lamda[m]);
-            std::cout <<"done it"<< std::endl;
-            potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-            std::cout << "after done dorecover force after insertion " << potential << std::endl;
-            std::cout << "m and lamdam" << m << " " << lamda[m] << std::endl;
             if (m == 0)
                 ghostList.push_back(randIndex);
-            potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-            std::cout << "1recover force after insertion " << potential << std::endl;
         }       
     }
 }
 
 void Gcmc::deletion(){
-    std::cout <<"deletion" << randIndex << std::endl;
     if (numReal == lowerLimit && m == 0){
     } else {
         numDel += 1;
         double oldPotential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-        std::cout <<"old " <<oldPotential << std::endl;
        
         if (m == 0){
             if (getRandomAtoms())  
                 updateForce(lamda[M-1]);
-            else{
-                std::cout << "can we get here" << std::endl;
+            else
                 return; 
-            }
         } else 
             updateForce(lamda[m-1]);
         double newPotential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-
-        std::cout <<"new " <<newPotential << std::endl;
         double dU = newPotential - oldPotential;
-        std::cout << "dU " << dU << std::endl;
         double acc = 1.0;
         if (m == 0)
-            acc = exp(-beta*1000*(dU-(lamda[M-1]-1.0)*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
+            acc = exp(-beta*(dU-(lamda[M-1]-1.0)*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
                   *pow((numReal-1)*vIn/waveLengthCube,lamda[M-1]-1.0)
                   *pow(numReal*nIn,1.0)/
                   pow((numReal-1.0+lamda[M-1])*(nIn-1.0+lamda[M-1]),lamda[M-1]);
         else
-            acc = exp(-beta*1000*(dU-(lamda[m-1]-lamda[m])*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
+            acc = exp(-beta*(dU-(lamda[m-1]-lamda[m])*mu)+eta[numReal*M+m-1]-eta[numReal*M+m])
                   *pow(numReal*vIn/waveLengthCube,lamda[m-1]-lamda[m])
                   *pow((numReal+lamda[m])*(nIn+lamda[m]),lamda[m])/
                   pow((numReal+lamda[m-1])*(nIn+lamda[m-1]),lamda[m-1]);
-        std::cout << "acc " << acc << std::endl;
         acc = std::min(1.0,acc);
         if (rand()/double(RAND_MAX) < acc){
-            std::cout <<"suc" << std::endl;
             sucDel += 1;
             if (m == 0){
                 m = M-1;
@@ -306,19 +256,12 @@ void Gcmc::deletion(){
                 ghostList.push_back(randIndex);
             } else 
                 m -= 1;
-        } else{ 
-            std::cout <<"fail" << std::endl;
+        } else 
             if (m == 0){
                 updateForce(1.0);
-                double potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-                std::cout << "1recover force after deletion " << potential << std::endl;
                 realList.push_back(randIndex);
-            } else{
+            } else
                 updateForce(lamda[m]); 
-                double potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-                std::cout << "2recover force after deletion " << potential << std::endl;
-            }
-        }   
     }
 }
                  
@@ -334,20 +277,6 @@ void Gcmc::step(){
     histogram[numReal*M+m] += 1.0;
     energy[numReal*M+m] += context->getState(OpenMM::State::Energy).getPotentialEnergy();
     eta[numReal*M+m] -= f;
-    double potential = context->getState(OpenMM::State::Energy).getPotentialEnergy();
-    std::cout <<"after step potential " << potential << std::endl;
-    std::cout <<"after step, check cluster again" << std::endl;
-    for (int i = 0; i < realList.size(); i++)
-        std::cout <<" "<< realList[i];
-    std::cout << std::endl; 
-    const std::vector<OpenMM::Vec3>& positions = 
-        context->getState(OpenMM::State::Positions).getPositions();
-    if (checkClusterCriteria(positions))
-        std::cout << "fine" << std::endl;
-    else
-        std::cout << "not fine" << std::endl;
-    std::cout << "randIndex after step" << randIndex << std::endl;
-    std::cout << "final distance after step" << " "<< refIndex <<" " << randIndex <<" "<< getDistance(positions,randIndex,refIndex) << std::endl;
     //integrator->step(mdSteps);
 }
 

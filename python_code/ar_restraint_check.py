@@ -20,9 +20,9 @@ M = 2                                    #number of intermediate states + 1
 charge = 0.0
 sigma = 0.3405
 epsilon = 0.997967
-realName = 'H'
-ghostName = 'Hg'
-intermediateName = 'Hi'
+#realName = 'H'
+#ghostName = 'Hg'
+#intermediateName = 'Hi'
 upperLimit = 30                            #maximum num of ion pairs
 lowerLimit = 1                            #minimum num of ion pairs 
 
@@ -35,28 +35,28 @@ atoms = list(pdb.topology.atoms())
 system = forcefield.createSystem(pdb.topology, nonbondedMethod=CutoffPeriodic,
          nonbondedCutoff=1.53225*nanometer, constraints = AllBonds, rigidWater = True)
 
-#create custom nonbonded force
-restraint = CustomNonbondedForce("A*b1*b2*max(0,r-rmax)^2") 
-restraint.addGlobalParameter("A", 1000000.0*kilojoules_per_mole/nanometers**2)
-restraint.addGlobalParameter("rmax", sigma*1.5*nanometers)
-restraint.addPerParticleParameter("b")
-setH = set()
-for atom in atoms:
-    para = [0.0]
-    restraint.addParticle(para)
-    setH.add(atom.index)
-restraint.addInteractionGroup(setH,setH)
-restraint.setCutoffDistance(2.0)
-restraint.setNonbondedMethod(2)
-system.addForce(restraint)
+##create custom nonbonded force
+#restraint = CustomNonbondedForce("A*b1*b2*max(0,r-rmax)^2") 
+#restraint.addGlobalParameter("A", 1000000.0*kilojoules_per_mole/nanometers**2)
+#restraint.addGlobalParameter("rmax", sigma*1.5*nanometers)
+#restraint.addPerParticleParameter("b")
+#setH = set()
+#for atom in atoms:
+#    para = [0.0]
+#    restraint.addParticle(para)
+#    setH.add(atom.index)
+#restraint.addInteractionGroup(setH,setH)
+#restraint.setCutoffDistance(2.0)
+#restraint.setNonbondedMethod(2)
+#system.addForce(restraint)
 
 #get nonbondedforce object from system to switch some real particles to ghost particles
 forces = system.getForces()
 for force in forces:
     if type(force) is NonbondedForce:
         nonbondedforce = force
-    if type(force) is CustomNonbondedForce:
-        custombondedforce = force
+#    if type(force) is CustomNonbondedForce:
+#        custombondedforce = force
 nonbondedforce.setReactionFieldDielectric(0.0)
 nonbondedforce.setUseDispersionCorrection(False)
 
@@ -77,9 +77,9 @@ simulation = Simulation(pdb.topology, system, integrator,platform)
 simulation.context.setPositions(pdb.positions)
 simulation.minimizeEnergy()
 #simulation.reporters.append(PDBReporter('gcmc_out_%d-%d.pdb' %(lowerLimit,upperLimit), 100000000000000))
-simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
-                            potentialEnergy=True, temperature=True))
-simulation.step(10000)
+#simulation.reporters.append(StateDataReporter(stdout, 1, step=True,
+#                            potentialEnergy=True, temperature=True))
+#simulation.step(10000)
 
 box = simulation.topology.getUnitCellDimensions().value_in_unit(nanometers)
 vol = box[0]*box[1]*box[2]*nanometer**3
@@ -105,12 +105,12 @@ parameters['numReal'] = numReal
 parameters['numGhost'] = numGhost
 parameters['realList'] = realList
 parameters['ghostList'] = ghostList
-parameters['realName'] = realName
-parameters['ghostName'] = ghostName
-parameters['intermediateName'] = intermediateName
+#parameters['realName'] = realName
+#parameters['ghostName'] = ghostName
+#parameters['intermediateName'] = intermediateName
 parameters['simulation'] = simulation
 parameters['nonbondedforce'] = nonbondedforce
-parameters['customnonbondedforce'] = restraint
+#parameters['customnonbondedforce'] = restraint
 parameters['mdStep'] = 10
 parameters['sigma'] = sigma
 parameters['charge'] = charge
@@ -153,8 +153,8 @@ gcmc.f = 0.0
 for i in range(numGcmc):
     gcmc.step()
     print ("numReal %f numGhost %f" %(gcmc.numReal+gcmc.lamda[gcmc.m],gcmc.numGhost-gcmc.lamda[gcmc.m])) 
-print(gcmc.getAverageNum())
-print(gcmc.getInsrPrabability())
+#print(gcmc.getAverageNum())
+#print(gcmc.getInsrPrabability())
 print(gcmc.getDelPrabability())
 print(gcmc.eta)
 print(gcmc.histogram)

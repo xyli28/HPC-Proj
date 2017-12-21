@@ -42,12 +42,12 @@ class Gcmc(object):
         self.numGhost = parameters['numGhost']             #number of ghost particles
         self.realList = parameters['realList']             #list of real particles
         self.ghostList = parameters['ghostList']           #list of ghost particles
-        self.realName = parameters['realName']             #real name
-        self.intermediateName = parameters['intermediateName']#intermediate name
-        self.ghostName = parameters['ghostName']           #ghost name     
+        #self.realName = parameters['realName']             #real name
+        #self.intermediateName = parameters['intermediateName']#intermediate name
+        #self.ghostName = parameters['ghostName']           #ghost name     
         self.simulation = parameters['simulation']         #simulation object        
         self.nonbondedforce = parameters['nonbondedforce'] #nonbonded force object
-        self.customnonbondedforce = parameters['customnonbondedforce']#custom nonbonded force object
+        #self.customnonbondedforce = parameters['customnonbondedforce']#custom nonbonded force object
         self.mdStep = parameters['mdStep']                 #MD steps between MC steps
         self.upperLimit = parameters['upperLimit']         #upper limit for cluster size
         self.lowerLimit = parameters['lowerLimit']         #lower linit for cluster size
@@ -72,8 +72,8 @@ class Gcmc(object):
         self.eta = [0.0 for x in range(self.upperLimit*self.M+1)]
         #histogram for intermediate states
         self.histogram = [0.0 for x in range(self.upperLimit*self.M+1)]                                
-        self.sumNumReal = 0                  #sum of of the num of particles at m == 0 state
-        self.numSum = 0                      #num of m == 0 state
+        #self.sumNumReal = 0                  #sum of of the num of particles at m == 0 state
+        #self.numSum = 0                      #num of m == 0 state
         
         #freeEnergy 
         self.freeEnergy = [0.0 for x in range(self.upperLimit*self.M+1)]                 
@@ -99,15 +99,15 @@ class Gcmc(object):
         self.nonbondedforce.setParticleParameters(self.randIndex,
             self.charge*scaling,self.sigma,self.epsilon*scaling**2)
         
-        if scaling == 0.0:
-            self.customnonbondedforce.setParticleParameters(self.refIndex,[0.0])
-            self.customnonbondedforce.setParticleParameters(self.randIndex,[0.0])
-        else:
-            self.customnonbondedforce.setParticleParameters(self.refIndex,[1-scaling])
-            self.customnonbondedforce.setParticleParameters(self.randIndex,[1-scaling])
+        #if scaling == 0.0:
+        #    self.customnonbondedforce.setParticleParameters(self.refIndex,[0.0])
+        #    self.customnonbondedforce.setParticleParameters(self.randIndex,[0.0])
+        #else:
+        #    self.customnonbondedforce.setParticleParameters(self.refIndex,[1-scaling])
+        #    self.customnonbondedforce.setParticleParameters(self.randIndex,[1-scaling])
 
         self.nonbondedforce.updateParametersInContext(self.simulation.context)
-        self.customnonbondedforce.updateParametersInContext(self.simulation.context)
+        #self.customnonbondedforce.updateParametersInContext(self.simulation.context)
 
     def DFS(self,graph,start):
         """
@@ -229,7 +229,6 @@ class Gcmc(object):
 
             if (not goodAtoms):
                 self.realList.append(self.randIndex)
-                print ("???????????")
                 return -1 
         #while (not goodAtoms):
         #    goodAtoms = True
@@ -266,23 +265,23 @@ class Gcmc(object):
         self.simulation.context.setVelocities(velocities)
 
 
-    def changeNameReal(self):
-        """change the name of the atoms to real name
+    #def changeNameReal(self):
+    #    """change the name of the atoms to real name
 
-        """
-        self.atoms[self.randIndex].name = self.realName
+    #    """
+    #    self.atoms[self.randIndex].name = self.realName
  
-    def changeNameGhost(self):
-        """change the name of the atoms to ghost name
+    #def changeNameGhost(self):
+    #    """change the name of the atoms to ghost name
 
-        """
-        self.atoms[self.randIndex].name = self.ghostName
+    #    """
+    #    self.atoms[self.randIndex].name = self.ghostName
 
-    def changeNameIntermediate(self):
-        """chaneg the name of the atoms to intermediate name
+    #def changeNameIntermediate(self):
+    #    """chaneg the name of the atoms to intermediate name
 
-        """
-        self.atoms[self.randIndex].name = self.intermediateName
+    #    """
+    #    self.atoms[self.randIndex].name = self.intermediateName
         
     def insertion(self):
         """Function to insert
@@ -321,11 +320,11 @@ class Gcmc(object):
                     self.m = 1
                     #set random velocity for the new particle
                     self.setRandomVelocity()
-                    self.changeNameIntermediate()
+                    #self.changeNameIntermediate()
                 elif self.m == self.M-1:
                     self.m = 0
                     self.realList.append(self.randIndex)
-                    self.changeNameReal()
+                    #self.changeNameReal()
                     self.numReal += 1
                     self.numGhost -= 1
                 else:
@@ -384,11 +383,11 @@ class Gcmc(object):
                     self.numReal -= 1
                     self.nIn -= 1
                     self.numGhost += 1
-                    self.changeNameIntermediate()
+                    #self.changeNameIntermediate()
                 elif self.m == 1:
                     self.m = 0 
                     self.ghostList.append(self.randIndex)
-                    self.changeNameGhost()
+                    #self.changeNameGhost()
                 else: 
                     self.m -= 1
             else: 
@@ -407,9 +406,9 @@ class Gcmc(object):
         else: 
             self.deletion()
         #calculate statiscals
-        if self.m == 0:
-            self.sumNumReal += self.numReal
-            self.numSum += 1
+        #if self.m == 0:
+            #self.sumNumReal += self.numReal
+            #self.numSum += 1
 
         self.histogram[self.numReal*self.M+self.m] += 1.0
         self.energy[self.numReal*self.M+self.m] += self.simulation.context.getState(getEnergy=True).getPotentialEnergy() 
@@ -461,12 +460,12 @@ class Gcmc(object):
         """
         return self.sucDel*1.0/self.numDel
    
-    def getAverageNum(self):
-        """get average num of particles, only count m=0 state,
-        state of half interaction is not included into calculation
-
-        """
-        return self.sumNumReal*1.0/self.numSum
+#    def getAverageNum(self):
+#        """get average num of particles, only count m=0 state,
+#        state of half interaction is not included into calculation
+#
+#        """
+#        return self.sumNumReal*1.0/self.numSum
          
      
     def rezeroStat(self):
@@ -477,8 +476,8 @@ class Gcmc(object):
         self.numDel = 0
         self.sucInsr = 0
         self.sucDel = 0
-        self.sumNumReal = 0
-        self.numSum = 0
+        #self.sumNumReal = 0
+        #self.numSum = 0
         self.rezeroHistogram() 
         
              
