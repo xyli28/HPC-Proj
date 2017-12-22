@@ -1,0 +1,12 @@
+Your First Name: Xinyi
+Your Last Name: Li
+The Last four digits of your UW-Madison student ID: 4285
+URL to Final Project GitHub repo (used for grading): https://github.com/xyli28/759-FinalProject
+Participate in Rescale competition for Surface tablet: No
+Name[s] of your Final Project teammates: No
+I took care of the course evaluation: When I logged into the system, it shows ”You have completed all your course evaluations” and I couldn’t find the link.
+
+
+NOTE: It's ok for a team to only generate one Final Report. However, this same document should show up in the Final Project folder of each team member.
+
+P.S. I obviously can't check if you evaluated the course. But I thought I'd ask anyway and see how you spin it.
