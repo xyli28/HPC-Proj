@@ -2,11 +2,7 @@
 Fina Project for ME759
 
 In order to successfully compile the code, you need to installed OpenMM Package.
-I have installed it in euler. But because of some reason, the complier counldn't
-find the -lOpenMM library. So the compiling may not be successful.
-
-But I have tested all codes in my own machine where I installed OpenMM properly.
-
+I have installed it in euler. 
 
 To compile and run:
 
